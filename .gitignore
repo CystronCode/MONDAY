@@ -1,0 +1,21 @@
+# Build directories
+build*/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# Generated build files & tools cache
+compile_commands.json
+.cache/
+
+# OS / Windows Zone Identifier
+.DS_Store
+*.swp
+*~
+*:Zone.Identifier
+
+# Python
+__pycache__/
+*.pyc

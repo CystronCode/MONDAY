@@ -1,0 +1,7 @@
+[SYSTEM] Extract durable facts from the following conversation summary.
+State each fact as a single sentence. Maximum 10 facts.
+Omit transient context (times, dates unless recurring).
+[SUMMARY]
+{episodic_summary}
+[END]
+Facts:
