@@ -1,0 +1,8 @@
+[SYSTEM] You are a memory consolidation assistant. Summarise the following conversation
+excerpt into a concise factual summary. Include: key decisions made, facts stated,
+tasks completed or pending. Omit greetings, filler, and repetition.
+Maximum length: 150 words.
+[CONVERSATION]
+{episodic_chunk}
+[END]
+Summary:

@@ -1,0 +1,30 @@
+syntax = "proto3";
+package monday.ipc.v1;
+
+// Transport: [4-byte length (big-endian)] [serialised MondayEnvelope]
+message MondayEnvelope {
+    uint64 seq          = 1;
+    uint64 timestamp_us = 2;
+    bytes  hmac         = 3;
+    oneof body {
+        PluginCallRequest       plugin_call_req   = 10;
+        PluginCallResponse      plugin_call_resp  = 11;
+        BlackboardReadRequest   bb_read_req       = 12;
+        BlackboardReadResponse  bb_read_resp      = 13;
+        BlackboardWriteRequest  bb_write_req      = 14;
+        BlackboardWriteResponse bb_write_resp     = 15;
+        ConsentRequest          consent_req       = 20;
+        ConsentResponse         consent_resp      = 21;
+        ShutdownNotification    shutdown          = 30;
+    }
+}
+
+message PluginCallRequest  { string plugin_id = 1; string method = 2; bytes args_json = 3; }
+message PluginCallResponse { bool success = 1; bytes result_json = 2; string error_msg = 3; }
+message BlackboardReadRequest  { string key = 1; }
+message BlackboardReadResponse { bool found = 1; bytes value = 2; string type_name = 3; }
+message BlackboardWriteRequest  { string key = 1; bytes value = 2; string type_name = 3; }
+message BlackboardWriteResponse { bool success = 1; string error_msg = 2; }
+message ConsentRequest  { string action_class = 1; string description = 2; string target_scope = 3; }
+message ConsentResponse { bool approved = 1; }
+message ShutdownNotification { string reason = 1; }

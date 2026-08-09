@@ -1,0 +1,10 @@
+Phase 0 Baseline Metrics:
+  CMake configure time:      12.3 seconds
+  Clean build time:          35.0 seconds
+  Docker image size:         N/A (WSL)
+  All sanitiser builds pass: YES
+  Generated file diff:       CLEAN
+  Protobuf compile:          PASS
+  test_error_taxonomy:       PASS (100% tests passed)
+  test_logger (concurrent):  PASS (4 threads x 1000 lines, 100% passed)
+  jq / ajv validation:       PASS

@@ -1,0 +1,48 @@
+# blackboard_schema.toml
+# Skeleton for Phase 0 — 5 keys covering the turn lifecycle
+
+[[key]]
+name       = "turn_id"
+type       = "int64"
+owner      = "CORE"
+readers    = "BROADCAST"
+lifecycle  = "PER_TURN"
+max_size_bytes = 8
+trust_level = "SYSTEM"
+
+[[key]]
+name       = "user_query"
+type       = "string"
+owner      = "CORE"
+readers    = "BROADCAST"
+lifecycle  = "PER_TURN"
+max_size_bytes = 4096
+trust_level = "USER"
+
+[[key]]
+name       = "goap_action"
+type       = "string"
+owner      = "GOAP"
+readers    = "BROADCAST"
+lifecycle  = "PER_TURN"
+max_size_bytes = 256
+trust_level = "SYSTEM"
+
+[[key]]
+name       = "llm_response"
+type       = "string"
+owner      = "INFERENCE"
+readers    = "BROADCAST"
+lifecycle  = "PER_TURN"
+max_size_bytes = 65536
+trust_level = "SYSTEM"
+
+[[key]]
+name       = "session_id"
+type       = "string"
+owner      = "CORE"
+readers    = "BROADCAST"
+lifecycle  = "PER_SESSION"
+max_size_bytes = 64
+trust_level = "SYSTEM"
+

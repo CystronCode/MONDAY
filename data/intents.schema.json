@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Monday Intent",
+  "type": "object",
+  "required": ["id", "utterances", "action", "action_class", "parameters", "description"],
+  "properties": {
+    "id":          { "type": "string", "minLength": 1 },
+    "utterances":  { "type": "array",  "items": { "type": "string" }, "minItems": 1 },
+    "action":      { "type": "string", "minLength": 1 },
+    "action_class": {
+      "type": "string",
+      "enum": ["READ_ONLY", "WRITE", "DESTRUCTIVE", "SHELL", "NETWORK"]
+    },
+    "parameters": { "type": "object" },
+    "description": { "type": "string" }
+  },
+  "if": {
+    "properties": {
+      "action": { "pattern": "^(DELETE_|OVERWRITE_|CLOSE_UNSAVED_)" }
+    }
+  },
+  "then": {
+    "properties": {
+      "action_class": { "const": "DESTRUCTIVE" }
+    }
+  },
+  "additionalProperties": false
+}
