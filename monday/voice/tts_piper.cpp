@@ -10,6 +10,7 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <new>
 
 struct monday_piper_tts {
     monday_onnx_session_t *session;
@@ -35,8 +36,9 @@ monday_error_t monday_piper_tts_init(monday_piper_tts_t **out_tts,
     monday_piper_tts_t *tts = (monday_piper_tts_t *)monday_zone_alloc(MONDAY_ZONE_STATIC, sizeof(monday_piper_tts_t));
     if (!tts) return MONDAY_ERROR(MONDAY_ERR_OUT_OF_MEMORY, "alloc piper tts failed");
 
-    tts->model_path = model_path;
-    tts->config_path = config_path ? config_path : "";
+    new (&tts->model_path) std::string(model_path);
+    new (&tts->config_path) std::string(config_path ? config_path : "");
+    new (&tts->token_accum) std::string();
     tts->session = nullptr;
 
     if (onnx_env) {
@@ -86,4 +88,7 @@ void monday_piper_tts_destroy(monday_piper_tts_t *tts) {
     if (tts->session) {
         monday_onnx_session_destroy(tts->session);
     }
+    tts->model_path.~basic_string();
+    tts->config_path.~basic_string();
+    tts->token_accum.~basic_string();
 }

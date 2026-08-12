@@ -226,8 +226,11 @@ monday_error_t monday_model_verify(const char              *manifest_path,
         manifest_dir[0] = '.'; manifest_dir[1] = '/';
         manifest_dir[2] = '\0';
     }
-    snprintf(out->model_path, sizeof(out->model_path), "%s%s",
-             manifest_dir, model_rel_path);
+    if (strlen(manifest_dir) + strlen(model_rel_path) >= sizeof(out->model_path)) {
+        return MONDAY_ERROR(MONDAY_ERR_INVALID_ARG, "Resolved model path exceeds buffer limit");
+    }
+    strcpy(out->model_path, manifest_dir);
+    strcat(out->model_path, model_rel_path);
     strncpy(out->sha256_hex, expected_sha256, 64);
     out->sha256_hex[64] = '\0';
 

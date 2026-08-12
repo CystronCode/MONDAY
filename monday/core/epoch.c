@@ -82,8 +82,10 @@ bool epoch_reset_begin(monday_epoch_t *ep) {
         Sleep(1);
 #else
         clock_gettime(CLOCK_MONOTONIC, &current_ts);
-        uint64_t elapsed_us = (uint64_t)((current_ts.tv_sec  - start_ts.tv_sec)  * 1000000ULL
-                                        + (current_ts.tv_nsec - start_ts.tv_nsec) / 1000ULL);
+        int64_t sec_diff = (int64_t)current_ts.tv_sec - (int64_t)start_ts.tv_sec;
+        int64_t nsec_diff = (int64_t)current_ts.tv_nsec - (int64_t)start_ts.tv_nsec;
+        int64_t elapsed_us_signed = sec_diff * 1000000LL + nsec_diff / 1000LL;
+        uint64_t elapsed_us = (elapsed_us_signed > 0) ? (uint64_t)elapsed_us_signed : 0ULL;
         if (elapsed_us >= timeout_us) return false;
         struct timespec req = {0, 1000000}; /* 1 ms backoff */
         nanosleep(&req, NULL);

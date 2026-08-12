@@ -10,6 +10,7 @@
 #include <cstring>
 #include <cmath>
 #include <string>
+#include <new>
 
 struct monday_silero_vad {
     monday_onnx_session_t *session;
@@ -26,7 +27,7 @@ monday_error_t monday_silero_vad_init(monday_silero_vad_t **out_vad,
     monday_silero_vad_t *vad = (monday_silero_vad_t *)monday_zone_alloc(MONDAY_ZONE_STATIC, sizeof(monday_silero_vad_t));
     if (!vad) return MONDAY_ERROR(MONDAY_ERR_OUT_OF_MEMORY, "alloc silero vad failed");
 
-    vad->model_path = model_path;
+    new (&vad->model_path) std::string(model_path);
     vad->session = nullptr;
 
     if (onnx_env) {
@@ -60,4 +61,5 @@ void monday_silero_vad_destroy(monday_silero_vad_t *vad) {
     if (vad->session) {
         monday_onnx_session_destroy(vad->session);
     }
+    vad->model_path.~basic_string();
 }

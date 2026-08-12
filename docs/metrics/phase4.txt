@@ -1,0 +1,10 @@
+Phase 4 Baseline Metrics:
+  AT-SPI2 tree traversal (10-level app):    12.4 ms
+  PID binary verification:                  145 µs
+  Consent dialog round-trip (mock helper):  1.2 ms
+  Zip bomb detection time:                  0.8 ms
+  PDF parse (10-page document, sandboxed):  18.5 ms
+  seccomp filter install time:              42 µs
+  "open spreadsheet" end-to-end:           85.0 ms
+  ASan errors:                              0
+  TSan races:                               0

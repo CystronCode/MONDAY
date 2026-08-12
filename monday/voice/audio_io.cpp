@@ -56,6 +56,8 @@ static int pa_audio_callback(const void *inputBuffer, void *outputBuffer,
 }
 #endif
 
+#include <new>
+
 monday_error_t monday_audio_init(monday_audio_stream_t **out_stream,
                                  const monday_audio_config_t *config) {
     if (!out_stream || !config) {
@@ -67,7 +69,7 @@ monday_error_t monday_audio_init(monday_audio_stream_t **out_stream,
         return MONDAY_ERROR(MONDAY_ERR_OUT_OF_MEMORY, "failed to allocate audio stream");
     }
 
-    std::memset(stream, 0, sizeof(monday_audio_stream_t));
+    new (stream) monday_audio_stream();
     stream->config = *config;
     if (stream->config.sample_rate == 0) stream->config.sample_rate = 16000;
     if (stream->config.frame_size == 0) stream->config.frame_size = 512;
@@ -187,4 +189,5 @@ void monday_audio_shutdown(monday_audio_stream_t *stream) {
 #endif
 
     monday_spsc_ring_free(&stream->ring);
+    stream->~monday_audio_stream();
 }

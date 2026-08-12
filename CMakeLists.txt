@@ -110,16 +110,18 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(SODIUM REQUIRED libsodium)
 pkg_check_modules(SQLCIPHER REQUIRED sqlcipher)
 
-# ── monday_security_lib (Phase 1 — Ed25519 + model_verify) ───────────────────
+# ── monday_security_lib (Phase 1 + Phase 4 — Ed25519, model_verify, consent, seccomp)
 add_library(monday_security_lib STATIC
     monday/security/ed25519_verify.c
     monday/security/model_verify.cpp
     monday/security/kdf.cpp
     monday/security/keystore.cpp
     monday/security/audit_log.cpp
+    monday/security/consent.cpp
+    monday/security/seccomp_filter.c
 )
 target_include_directories(monday_security_lib PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(monday_security_lib PUBLIC monday_core_lib monday_memory_lib ${SODIUM_LIBRARIES})
+target_link_libraries(monday_security_lib PUBLIC monday_core_lib monday_memory_lib ${SODIUM_LIBRARIES} ${SQLCIPHER_LIBRARIES})
 target_compile_definitions(monday_security_lib PUBLIC MONDAY_HAVE_LIBSODIUM)
 
 # ── CPUID kernel compile options ──────────────────────────────────────────────
@@ -248,6 +250,49 @@ target_link_libraries(monday_rag_lib PUBLIC
     monday_engram_lib
 )
 
+# ── monday_automation_lib (Phase 4 — PID Verifier + Blocklist + Drivers + Dispatcher) ──
+add_library(monday_automation_lib STATIC
+    monday/automation/automation_blocklist.c
+    monday/automation/pid_verifier.cpp
+    monday/automation/linux/atspi_driver.cpp
+    monday/automation/linux/libei_input.cpp
+    monday/automation/linux/libxdo_input.cpp
+    monday/automation/windows/uia_driver.cpp
+    monday/automation/tool_dispatcher.cpp
+)
+target_include_directories(monday_automation_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_automation_lib PUBLIC
+    monday_core_lib
+    monday_security_lib
+)
+
+# ── monday_parsers_lib (Phase 4 — Zip, PDF, DOCX, OCR & Sandboxed Subprocess) ──
+add_library(monday_parsers_lib STATIC
+    monday/parsers/zip_parser.cpp
+    monday/parsers/pdf_parser.cpp
+    monday/parsers/docx_parser.cpp
+    monday/parsers/ocr_tesseract.cpp
+    monday/parsers/parser_subprocess.cpp
+)
+target_include_directories(monday_parsers_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_parsers_lib PUBLIC
+    monday_core_lib
+    monday_security_lib
+)
+
+# ── monday-trusted-helper (Phase 4 — Passphrase, Consent & Cherry Helper GUI/IPC) ──
+add_executable(monday-trusted-helper
+    trusted-helper/main.cpp
+    trusted-helper/passphrase_dialog.cpp
+    trusted-helper/consent_dialog.cpp
+    trusted-helper/cherry_dialog.cpp
+)
+target_include_directories(monday-trusted-helper PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday-trusted-helper PRIVATE
+    monday_core_lib
+    monday_security_lib
+)
+
 # ── monday-core executable ────────────────────────────────────────────────────
 add_executable(monday-core
     monday-core/main.cpp
@@ -269,8 +314,11 @@ target_link_libraries(monday-core PRIVATE
     monday_storage_lib
     monday_engram_lib
     monday_rag_lib
+    monday_automation_lib
+    monday_parsers_lib
     pthread
 )
+add_dependencies(monday-core generate_blackboard)
 add_dependencies(monday-core generate_blackboard)
 
 # ── monday-sandbox executable ─────────────────────────────────────────────────

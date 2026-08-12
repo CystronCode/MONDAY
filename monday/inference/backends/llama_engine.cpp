@@ -136,16 +136,26 @@ Result<InferenceResult> LlamaEngine::run_inference(const InferenceRequest &req) 
 
     std::string prompt_str = req.prompt ? req.prompt : "";
 
+    if (!req.append_to_kv) {
+        reset_context();
+    }
+
+    llama_memory_t mem = llama_get_memory(impl_->ctx);
+    bool is_empty = true;
+    if (mem) {
+        is_empty = (llama_memory_seq_pos_max(mem, 0) < 0);
+    }
+
     // Format prompt using ChatML template if not already present
     std::string formatted_prompt;
     if (prompt_str.find("<|im_start|>") == std::string::npos) {
-        formatted_prompt = "<|im_start|>system\nYou are Monday, a concise offline AI operating system assistant.<|im_end|>\n<|im_start|>user\n" + prompt_str + "<|im_end|>\n<|im_start|>assistant\n";
+        if (is_empty) {
+            formatted_prompt = "<|im_start|>system\nYou are Monday, a concise offline AI operating system assistant. You run locally and offline. You are not created by Anthropic, OpenAI, or Google. Your name is Monday.<|im_end|>\n<|im_start|>user\n" + prompt_str + "<|im_end|>\n<|im_start|>assistant\n";
+        } else {
+            formatted_prompt = "\n<|im_start|>user\n" + prompt_str + "<|im_end|>\n<|im_start|>assistant\n";
+        }
     } else {
         formatted_prompt = prompt_str;
-    }
-
-    if (!req.append_to_kv) {
-        reset_context();
     }
 
     // Tokenize prompt
@@ -155,7 +165,7 @@ Result<InferenceResult> LlamaEngine::run_inference(const InferenceRequest &req) 
                                   static_cast<int32_t>(formatted_prompt.size()),
                                   prompt_tokens.data(),
                                   static_cast<int32_t>(prompt_tokens.size()),
-                                  true,   // add_special (BOS)
+                                  is_empty,   // add_special (BOS)
                                   true);  // parse_special
     if (n_prompt < 0) {
         prompt_tokens.resize(-n_prompt);
@@ -207,6 +217,12 @@ Result<InferenceResult> LlamaEngine::run_inference(const InferenceRequest &req) 
         llama_token new_tok = llama_sampler_sample(smpl, impl_->ctx, -1);
         llama_sampler_accept(smpl, new_tok);
 
+        // ALWAYS decode the token first so it is appended to the KV cache
+        llama_batch next_batch = llama_batch_get_one(&new_tok, 1);
+        if (llama_decode(impl_->ctx, next_batch) != 0) {
+            break;
+        }
+
         if (llama_vocab_is_eog(impl_->vocab, new_tok)) {
             break;
         }
@@ -228,11 +244,6 @@ Result<InferenceResult> LlamaEngine::run_inference(const InferenceRequest &req) 
         } else {
             generated_text += piece_str;
             generated_count++;
-        }
-
-        llama_batch next_batch = llama_batch_get_one(&new_tok, 1);
-        if (llama_decode(impl_->ctx, next_batch) != 0) {
-            break;
         }
     }
 

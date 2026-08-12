@@ -88,3 +88,22 @@ target_link_libraries(test_tier_selector PRIVATE Catch2::Catch2WithMain monday_c
 target_include_directories(test_tier_selector PRIVATE ${CMAKE_SOURCE_DIR})
 add_test(NAME test_tier_selector COMMAND test_tier_selector)
 
+# ── Phase 4: test_consent (C++) ──────────────────────────────────────────────
+add_executable(test_consent test_consent.cpp)
+target_link_libraries(test_consent PRIVATE Catch2::Catch2WithMain monday_core_lib monday_security_lib ${SQLCIPHER_LIBRARIES})
+target_include_directories(test_consent PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_consent COMMAND test_consent)
+
+# ── Phase 4: test_pid_verifier (C++) ─────────────────────────────────────────
+add_executable(test_pid_verifier test_pid_verifier.cpp)
+target_link_libraries(test_pid_verifier PRIVATE Catch2::Catch2WithMain monday_core_lib monday_security_lib monday_automation_lib)
+target_include_directories(test_pid_verifier PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_pid_verifier COMMAND test_pid_verifier)
+
+# ── Phase 4: test_zip_parser (C++) ────────────────────────────────────────────
+add_executable(test_zip_parser test_zip_parser.cpp)
+target_link_libraries(test_zip_parser PRIVATE Catch2::Catch2WithMain monday_core_lib monday_security_lib monday_parsers_lib)
+target_include_directories(test_zip_parser PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_zip_parser COMMAND test_zip_parser)
+
+

@@ -9,6 +9,7 @@
 
 #include <cstring>
 #include <string>
+#include <new>
 
 struct monday_whisper_stt {
     std::string model_path;
@@ -23,7 +24,7 @@ monday_error_t monday_whisper_stt_init(monday_whisper_stt_t **out_stt, const cha
     monday_whisper_stt_t *stt = (monday_whisper_stt_t *)monday_zone_alloc(MONDAY_ZONE_STATIC, sizeof(monday_whisper_stt_t));
     if (!stt) return MONDAY_ERROR(MONDAY_ERR_OUT_OF_MEMORY, "alloc whisper stt failed");
 
-    stt->model_path = model_path;
+    new (&stt->model_path) std::string(model_path);
     stt->inited = true;
 
     *out_stt = stt;
@@ -53,4 +54,5 @@ monday_error_t monday_whisper_stt_transcribe(monday_whisper_stt_t *stt,
 void monday_whisper_stt_destroy(monday_whisper_stt_t *stt) {
     if (!stt) return;
     stt->inited = false;
+    stt->model_path.~basic_string();
 }
