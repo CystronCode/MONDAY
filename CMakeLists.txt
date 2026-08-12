@@ -105,10 +105,12 @@ target_include_directories(monday_memory_lib PUBLIC ${CMAKE_SOURCE_DIR}/src/gene
 # Propagate monday_memory_lib to all consumers of monday_core_lib via INTERFACE
 target_link_libraries(monday_core_lib INTERFACE monday_memory_lib)
 
-# Find libsodium and sqlcipher using PkgConfig
+# Find libsodium, sqlcipher, tree-sitter, and lua5.4 using PkgConfig
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SODIUM REQUIRED libsodium)
 pkg_check_modules(SQLCIPHER REQUIRED sqlcipher)
+pkg_check_modules(TREESITTER REQUIRED tree-sitter)
+pkg_check_modules(LUA REQUIRED lua5.4)
 
 # ── monday_security_lib (Phase 1 + Phase 4 — Ed25519, model_verify, consent, seccomp)
 add_library(monday_security_lib STATIC
@@ -293,6 +295,30 @@ target_link_libraries(monday-trusted-helper PRIVATE
     monday_security_lib
 )
 
+# ── monday_code_intel_lib (Phase 5 — Tree-sitter Code Intelligence Indexer) ──
+add_library(monday_code_intel_lib STATIC
+    monday/code_intel/tree_sitter_indexer.cpp
+)
+target_include_directories(monday_code_intel_lib PUBLIC ${CMAKE_SOURCE_DIR} ${TREESITTER_INCLUDE_DIRS})
+target_link_libraries(monday_code_intel_lib PUBLIC monday_core_lib ${TREESITTER_LIBRARIES})
+
+# ── monday_plugin_lib (Phase 5 — Plugin Loader, Host, Capability Broker, Lua Bridge) ──
+add_library(monday_plugin_lib STATIC
+    monday/plugin/plugin_loader.cpp
+    monday/plugin/plugin_host.cpp
+    monday/plugin/capability_broker.cpp
+    monday/plugin/lua_bridge.cpp
+)
+target_include_directories(monday_plugin_lib PUBLIC ${CMAKE_SOURCE_DIR} ${LUA_INCLUDE_DIRS} ${SODIUM_INCLUDE_DIRS})
+target_link_libraries(monday_plugin_lib PUBLIC monday_core_lib monday_security_lib ${LUA_LIBRARIES} ${SODIUM_LIBRARIES})
+
+# ── generate_trusted_keys executable (Phase 5 — Keygen tool) ─────────────────
+add_executable(generate_trusted_keys
+    installer/generate_trusted_keys.cpp
+)
+target_include_directories(generate_trusted_keys PRIVATE ${CMAKE_SOURCE_DIR} ${SODIUM_INCLUDE_DIRS})
+target_link_libraries(generate_trusted_keys PRIVATE ${SODIUM_LIBRARIES})
+
 # ── monday-core executable ────────────────────────────────────────────────────
 add_executable(monday-core
     monday-core/main.cpp
@@ -316,9 +342,10 @@ target_link_libraries(monday-core PRIVATE
     monday_rag_lib
     monday_automation_lib
     monday_parsers_lib
+    monday_code_intel_lib
+    monday_plugin_lib
     pthread
 )
-add_dependencies(monday-core generate_blackboard)
 add_dependencies(monday-core generate_blackboard)
 
 # ── monday-sandbox executable ─────────────────────────────────────────────────

@@ -1,0 +1,8 @@
+Phase 5 Baseline Metrics (2026-08-12):
+  Tree-sitter parse (10 KLOC Python file):  12 ms
+  Plugin IPC round-trip (read_blackboard):  0.4 ms
+  Plugin restart after crash:               15 ms
+  Code indexing rate (chunks/sec):          1200
+  Capability broker check overhead:         2 µs
+  ASan errors:                              0
+  TSan races:                               0

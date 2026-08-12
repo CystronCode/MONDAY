@@ -106,4 +106,11 @@ target_link_libraries(test_zip_parser PRIVATE Catch2::Catch2WithMain monday_core
 target_include_directories(test_zip_parser PRIVATE ${CMAKE_SOURCE_DIR})
 add_test(NAME test_zip_parser COMMAND test_zip_parser)
 
+# ── Phase 5: test_plugin_loader (C++) ─────────────────────────────────────────
+add_executable(test_plugin_loader test_plugin_loader.cpp)
+target_link_libraries(test_plugin_loader PRIVATE Catch2::Catch2WithMain monday_core_lib monday_security_lib monday_plugin_lib ${SODIUM_LIBRARIES})
+target_include_directories(test_plugin_loader PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_plugin_loader COMMAND test_plugin_loader)
+
+
 

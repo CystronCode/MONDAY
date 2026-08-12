@@ -56,3 +56,22 @@ target_include_directories(test_rag_pipeline PRIVATE
 )
 add_test(NAME test_rag_pipeline COMMAND test_rag_pipeline)
 
+# ── Phase 5: test_plugin_lifecycle (C++) ─────────────────────────────────────
+add_executable(test_plugin_lifecycle test_plugin_lifecycle.cpp)
+target_link_libraries(test_plugin_lifecycle PRIVATE
+    Catch2::Catch2WithMain
+    monday_core_lib
+    monday_memory_lib
+    monday_security_lib
+    monday_plugin_lib
+    ${LUA_LIBRARIES}
+    ${SODIUM_LIBRARIES}
+    pthread
+)
+target_include_directories(test_plugin_lifecycle PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src/generated
+)
+add_test(NAME test_plugin_lifecycle COMMAND test_plugin_lifecycle)
+
+
