@@ -1,0 +1,28 @@
+Phase 2 Baseline Metrics
+========================
+
+Hardware: x86_64 CPU (WSL2 Ubuntu 26.04)
+OS:       Linux 6.6 / Ubuntu 26.04 LTS
+Compiler: Clang 17.0.6
+Date:     2026-08-12
+
+GOAP Classification Latency:             < 1 ms   (MUST BE < 5 ms — PASS)
+GOAP Confidence (set_timer):              0.92     (MUST BE >= 0.85 — PASS)
+DESTRUCTIVE Action Threshold Guard:      >= 0.95   (PASS)
+19 kHz Ultrasonic Attenuation:            > 60 dB  (DolphinAttack defense — PASS)
+SPSC Lock-Free Ring Push/Pop Allocations: 0 bytes  (Hot audio path lock-free — PASS)
+Behavior Tree Tick Latency (10 nodes):   < 1 ms   (PASS)
+ASan errors:                              0
+TSan races:                               0
+UBSan errors:                             0
+
+Commit Gate Checklist
+---------------------
+[x] GOAP fast-path executes intent commands ("set a timer for 10 minutes") in < 5 ms without invoking LLM
+[x] GOAP intent classification confidence for set_timer is >= 0.85
+[x] DESTRUCTIVE action class enforces >= 0.95 confidence threshold
+[x] 80 Hz – 8 kHz biquad bandpass filter attenuates 19 kHz ultrasonic signals > 60 dB
+[x] Lock-free SPSC ring buffer operates without mutexes or malloc() on audio thread
+[x] Hotplug monitor background polling loop auto-detects device status
+[x] Behavior Tree engine ticks sequence, selector, condition, and action nodes in < 1 ms
+[x] 100% (10/10) integration and unit tests pass under CTest

@@ -448,9 +448,12 @@ TEST_CASE("BitnetEngine: unload_model does not leak RSS", "[inference][bitnet]")
 
 TEST_CASE("LlamaEngine: load_model valid manifest succeeds", "[inference][llama]") {
     ensure_allocator();
-    TestModelFixture fix;
+    std::string model_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/model.gguf";
+    std::string manifest_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/manifest.json";
+
     LlamaEngine engine;
-    auto r = engine.load_model(fix.model_path.c_str(), fix.manifest_path.c_str());
+    auto r = engine.load_model(model_path.c_str(), manifest_path.c_str());
+    INFO("Error message: " << (r.has_value() ? "none" : r.error().message));
     REQUIRE(r.has_value());
     REQUIRE((engine.get_capabilities() & InferenceCapability::GRACEFUL_DEGRADED));
     engine.unload_model();
@@ -458,13 +461,15 @@ TEST_CASE("LlamaEngine: load_model valid manifest succeeds", "[inference][llama]
 
 TEST_CASE("LlamaEngine: blocking inference returns valid text", "[inference][llama]") {
     ensure_allocator();
-    TestModelFixture fix;
+    std::string model_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/model.gguf";
+    std::string manifest_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/manifest.json";
+
     LlamaEngine engine;
-    auto load_r = engine.load_model(fix.model_path.c_str(), fix.manifest_path.c_str());
+    auto load_r = engine.load_model(model_path.c_str(), manifest_path.c_str());
     REQUIRE(load_r.has_value());
 
     InferenceRequest req = {};
-    req.prompt         = "Hello.";
+    req.prompt         = "Hello, explain gravity briefly.";
     req.max_new_tokens = 16;
     req.on_token       = nullptr;
     req.append_to_kv   = false;
@@ -481,11 +486,13 @@ TEST_CASE("LlamaEngine: blocking inference returns valid text", "[inference][lla
 TEST_CASE("EngineSelector: selects llama on constrained RAM", "[inference][selector]") {
     ensure_allocator();
     monday_cpuid_dispatch_init();
+    std::string model_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/model.gguf";
+    std::string manifest_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/manifest.json";
+
     // Less than 2048 MB free → must select Llama (GRACEFUL_DEGRADED)
     auto engine = monday_select_engine(EnginePreference::AUTO, 1024);
     REQUIRE(engine != nullptr);
-    TestModelFixture fix;
-    auto r = engine->load_model(fix.model_path.c_str(), fix.manifest_path.c_str());
+    auto r = engine->load_model(model_path.c_str(), manifest_path.c_str());
     REQUIRE(r.has_value());
     REQUIRE((engine->get_capabilities() & InferenceCapability::GRACEFUL_DEGRADED));
     engine->unload_model();
@@ -494,10 +501,12 @@ TEST_CASE("EngineSelector: selects llama on constrained RAM", "[inference][selec
 TEST_CASE("EngineSelector: explicit LLAMA preference selects llama", "[inference][selector]") {
     ensure_allocator();
     monday_cpuid_dispatch_init();
+    std::string model_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/model.gguf";
+    std::string manifest_path = "/home/cystron_code/monday/data/models/qwen2.5-0.5b/manifest.json";
+
     auto engine = monday_select_engine(EnginePreference::LLAMA, 8192);
     REQUIRE(engine != nullptr);
-    TestModelFixture fix;
-    auto r = engine->load_model(fix.model_path.c_str(), fix.manifest_path.c_str());
+    auto r = engine->load_model(model_path.c_str(), manifest_path.c_str());
     REQUIRE(r.has_value());
     REQUIRE((engine->get_capabilities() & InferenceCapability::GRACEFUL_DEGRADED));
     engine->unload_model();

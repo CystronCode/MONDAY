@@ -19,3 +19,18 @@ compile_commands.json
 # Python
 __pycache__/
 *.pyc
+
+# Large Model weights
+*.gguf
+*.bin
+*.onnx
+data/models/**/*.gguf
+data/models/**/*.bin
+data/models/**/*.onnx
+
+# Local media and logs
+*.wav
+*.log
+monday.log
+data/mic_input.wav
+my_voice.wav

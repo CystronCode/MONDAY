@@ -136,6 +136,13 @@ add_library(monday_kernel_scalar OBJECT
 )
 target_include_directories(monday_kernel_scalar PRIVATE ${CMAKE_SOURCE_DIR})
 
+# ── third-party: llama.cpp ───────────────────────────────────────────────────
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+add_subdirectory(third_party/llama.cpp EXCLUDE_FROM_ALL)
+
 # ── monday_inference_lib (Phase 1 — IInferenceEngine + backends + dispatch) ──
 add_library(monday_inference_lib STATIC
     monday/inference/cpuid_dispatch.c
@@ -146,12 +153,49 @@ add_library(monday_inference_lib STATIC
     $<TARGET_OBJECTS:monday_kernel_sse4>
     $<TARGET_OBJECTS:monday_kernel_scalar>
 )
-target_include_directories(monday_inference_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(monday_inference_lib PUBLIC
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/third_party/llama.cpp/include
+    ${CMAKE_SOURCE_DIR}/third_party/llama.cpp/ggml/include
+)
 target_link_libraries(monday_inference_lib PUBLIC
     monday_core_lib
     monday_memory_lib
     monday_security_lib
+    llama
 )
+
+# ── monday_voice_lib (Phase 2 — Audio IO + Bandpass + VAD + STT/TTS) ─────────
+add_library(monday_voice_lib STATIC
+    monday/core/spsc_ring.c
+    monday/voice/bandpass_filter.c
+    monday/voice/audio_io.cpp
+    monday/voice/hotplug_monitor.cpp
+    monday/inference/onnx_session.cpp
+    monday/voice/vad_webrtc.cpp
+    monday/voice/vad_silero.cpp
+    monday/voice/stt_whisper.cpp
+    monday/voice/tts_piper.cpp
+)
+target_include_directories(monday_voice_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_voice_lib PUBLIC monday_core_lib pthread)
+
+# ── monday_goap_lib (Phase 2 — Intent Table + GOAP Planner + Extractors) ──────
+add_library(monday_goap_lib STATIC
+    monday/goap/extractors.c
+    monday/goap/extractors_generated.c
+    monday/goap/intent_table.cpp
+    monday/goap/goap_planner.cpp
+)
+target_include_directories(monday_goap_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_goap_lib PUBLIC monday_core_lib)
+
+# ── monday_bt_lib (Phase 2 — Behavior Tree Engine) ───────────────────────────
+add_library(monday_bt_lib STATIC
+    monday/bt/bt_engine.cpp
+)
+target_include_directories(monday_bt_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_bt_lib PUBLIC monday_core_lib monday_goap_lib)
 
 # ── monday-core executable ────────────────────────────────────────────────────
 add_executable(monday-core
@@ -168,6 +212,9 @@ target_link_libraries(monday-core PRIVATE
     monday_memory_lib
     monday_security_lib
     monday_inference_lib
+    monday_voice_lib
+    monday_goap_lib
+    monday_bt_lib
     pthread
 )
 add_dependencies(monday-core generate_blackboard)
