@@ -39,39 +39,63 @@ monday_error_t monday_install_seccomp_filter(void) {
         // Load syscall number
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
 
-        // Allowed syscalls
+        // Allowed syscalls list
 #if defined(__NR_read)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_read, 10, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_read, 18, 0),
 #endif
 #if defined(__NR_write)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_write, 9, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_write, 17, 0),
+#endif
+#if defined(__NR_open)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_open, 16, 0),
+#endif
+#if defined(__NR_openat)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_openat, 15, 0),
 #endif
 #if defined(__NR_close)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_close, 8, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_close, 14, 0),
 #endif
 #if defined(__NR_fstat)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fstat, 7, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fstat, 13, 0),
+#endif
+#if defined(__NR_newfstatat)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_newfstatat, 12, 0),
 #endif
 #if defined(__NR_lseek)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_lseek, 6, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_lseek, 11, 0),
 #endif
 #if defined(__NR_mmap)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_mmap, 5, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_mmap, 10, 0),
 #endif
 #if defined(__NR_munmap)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_munmap, 4, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_munmap, 9, 0),
+#endif
+#if defined(__NR_mprotect)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_mprotect, 8, 0),
 #endif
 #if defined(__NR_brk)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_brk, 3, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_brk, 7, 0),
+#endif
+#if defined(__NR_futex)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_futex, 6, 0),
+#endif
+#if defined(__NR_getrandom)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getrandom, 5, 0),
+#endif
+#if defined(__NR_getpid)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_getpid, 4, 0),
 #endif
 #if defined(__NR_exit_group)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_exit_group, 2, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_exit_group, 3, 0),
 #endif
 #if defined(__NR_exit)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_exit, 1, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_exit, 2, 0),
 #endif
 #if defined(__NR_rt_sigreturn)
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_rt_sigreturn, 0, 1),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_rt_sigreturn, 1, 0),
+#endif
+#if defined(__NR_rseq)
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_rseq, 0, 1),
 #endif
 
         // Default action: Kill process

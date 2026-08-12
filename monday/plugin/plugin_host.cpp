@@ -5,6 +5,7 @@
 #include "monday/plugin/plugin_host.h"
 #include "monday/plugin/lua_bridge.h"
 #include "monday/security/seccomp_filter.h"
+#include "monday/core/platform.h"
 #include "monday/core/log.h"
 
 #include <unistd.h>
@@ -21,10 +22,21 @@ PluginHost::PluginHost(CapabilityBroker *broker) : broker_(broker) {}
 PluginHost::~PluginHost() {
     for (auto &[id, inst] : instances_) {
         if (inst.active && inst.pid > 0) {
-            kill(inst.pid, SIGTERM);
+            kill(inst.pid, SIGKILL);
             waitpid(inst.pid, nullptr, WNOHANG);
         }
     }
+}
+
+static void reset_child_signals() {
+    struct sigaction sa;
+    std::memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = SIG_DFL;
+    sigaction(SIGTERM, &sa, nullptr);
+    sigaction(SIGINT, &sa, nullptr);
+    sigaction(SIGQUIT, &sa, nullptr);
+    sigaction(SIGABRT, &sa, nullptr);
+    sigaction(SIGSEGV, &sa, nullptr);
 }
 
 monday::Result<pid_t> PluginHost::launch_plugin(const PluginManifest &manifest) {
@@ -39,9 +51,10 @@ monday::Result<pid_t> PluginHost::launch_plugin(const PluginManifest &manifest) 
     }
 
     if (pid == 0) {
+        reset_child_signals();
         // Child process execution sandbox
 #ifdef MONDAY_LINUX
-        monday_seccomp_install_filter();
+        monday_install_seccomp_filter();
 #endif
 
         lua_State *L = luaL_newstate();
@@ -80,7 +93,7 @@ monday::Result<void> PluginHost::stop_plugin(const std::string &plugin_id) {
     }
 
     if (it->second.pid > 0) {
-        kill(it->second.pid, SIGTERM);
+        kill(it->second.pid, SIGKILL);
         waitpid(it->second.pid, nullptr, 0);
     }
 
@@ -120,14 +133,22 @@ void PluginHost::handle_process_deaths() {
     while ((died_pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (auto &[id, inst] : instances_) {
             if (inst.pid == died_pid && inst.active) {
-                monday_log_write(MONDAY_LOG_DIAGNOSTIC, "Plugin process died, restarting within 2s");
+                // If exited normally with status 0, mark inactive and do not restart
+                if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                    inst.active = false;
+                    monday_log_write(MONDAY_LOG_DIAGNOSTIC, "Plugin process exited normally");
+                    break;
+                }
+
+                monday_log_write(MONDAY_LOG_DIAGNOSTIC, "Plugin process crashed, restarting within 2s");
                 inst.restart_count++;
 
                 // Re-launch child process
                 pid_t new_pid = fork();
                 if (new_pid == 0) {
+                    reset_child_signals();
 #ifdef MONDAY_LINUX
-                    monday_seccomp_install_filter();
+                    monday_install_seccomp_filter();
 #endif
                     lua_State *L = luaL_newstate();
                     if (L) {
