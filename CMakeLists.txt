@@ -19,6 +19,7 @@ include(ModuleBoundaries)
 # Global include roots
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_BINARY_DIR}/src/generated)
+include_directories(${CMAKE_SOURCE_DIR}/src/generated)
 
 # ── third-party: tl::expected ────────────────────────────────────────────────
 add_library(tl_expected INTERFACE)
@@ -80,9 +81,11 @@ add_custom_target(generate_proto ALL
         ${CMAKE_SOURCE_DIR}/src/generated/monday_ipc_v1.pb.h
 )
 
-# ── monday_core_lib (shared across tests and binary) ─────────────────────────
+# ── monday_core_lib (Phase 0 + Phase 1 core) ─────────────────────────────────
 add_library(monday_core_lib STATIC
     monday/core/log.c
+    monday/core/epoch.c
+    monday/core/allocator.c
     src/generated/blackboard_accessors.c
 )
 add_dependencies(monday_core_lib generate_blackboard)
@@ -90,6 +93,84 @@ target_include_directories(monday_core_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src/generated)
 target_link_libraries(monday_core_lib PUBLIC tl_expected)
+
+# ── monday_memory_lib (Phase 1 — DOOM Zone + TLSF) ───────────────────────────
+add_library(monday_memory_lib STATIC
+    monday/memory/zone.c
+    monday/memory/tlsf_pool.c
+)
+target_include_directories(monday_memory_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_memory_lib PUBLIC monday_core_lib)
+
+# ── monday_security_lib (Phase 1 — Ed25519 + model_verify) ───────────────────
+add_library(monday_security_lib STATIC
+    monday/security/ed25519_verify.c
+    monday/security/model_verify.cpp
+)
+target_include_directories(monday_security_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_security_lib PUBLIC monday_core_lib)
+# Uncomment when libsodium is available:
+# find_package(sodium REQUIRED)
+# target_link_libraries(monday_security_lib PUBLIC sodium)
+# target_compile_definitions(monday_security_lib PUBLIC MONDAY_HAVE_LIBSODIUM)
+
+# ── CPUID kernel compile options ──────────────────────────────────────────────
+# The three kernel variants are compiled separately with different SIMD flags.
+# The dispatch table (cpuid_dispatch.c) and scalar kernel use no SIMD flags.
+# The baseline for production builds is -march=x86-64-v2 (SSE4.2+POPCNT).
+
+add_library(monday_kernel_avx2 OBJECT
+    monday/inference/kernels/matmul_avx2.c
+)
+target_compile_options(monday_kernel_avx2 PRIVATE -mavx2)
+target_include_directories(monday_kernel_avx2 PRIVATE ${CMAKE_SOURCE_DIR})
+
+add_library(monday_kernel_sse4 OBJECT
+    monday/inference/kernels/matmul_sse4.c
+)
+target_compile_options(monday_kernel_sse4 PRIVATE -msse4.2 -msse4.1)
+target_include_directories(monday_kernel_sse4 PRIVATE ${CMAKE_SOURCE_DIR})
+
+add_library(monday_kernel_scalar OBJECT
+    monday/inference/kernels/matmul_scalar.c
+)
+target_include_directories(monday_kernel_scalar PRIVATE ${CMAKE_SOURCE_DIR})
+
+# ── monday_inference_lib (Phase 1 — IInferenceEngine + backends + dispatch) ──
+add_library(monday_inference_lib STATIC
+    monday/inference/cpuid_dispatch.c
+    monday/inference/backends/bitnet_engine.cpp
+    monday/inference/backends/llama_engine.cpp
+    monday/inference/engine_selector.cpp
+    $<TARGET_OBJECTS:monday_kernel_avx2>
+    $<TARGET_OBJECTS:monday_kernel_sse4>
+    $<TARGET_OBJECTS:monday_kernel_scalar>
+)
+target_include_directories(monday_inference_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_inference_lib PUBLIC
+    monday_core_lib
+    monday_memory_lib
+    monday_security_lib
+)
+
+# ── monday-core executable ────────────────────────────────────────────────────
+add_executable(monday-core
+    monday-core/main.cpp
+    monday-core/main_loop.cpp
+    monday-core/shutdown.cpp
+)
+target_include_directories(monday-core PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src/generated
+)
+target_link_libraries(monday-core PRIVATE
+    monday_core_lib
+    monday_memory_lib
+    monday_security_lib
+    monday_inference_lib
+    pthread
+)
+add_dependencies(monday-core generate_blackboard)
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 enable_testing()

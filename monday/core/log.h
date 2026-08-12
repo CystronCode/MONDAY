@@ -2,6 +2,10 @@
 #pragma once
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     MONDAY_LOG_SYSTEM      = 0,
     MONDAY_LOG_DIAGNOSTIC  = 1,
@@ -25,3 +29,7 @@ void monday_log_write_kv_long(monday_log_level_t level,
 
 // Flush and close the logger.
 void monday_log_close(void);
+
+#ifdef __cplusplus
+}
+#endif

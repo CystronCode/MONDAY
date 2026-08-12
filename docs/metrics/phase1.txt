@@ -1,0 +1,44 @@
+Phase 1 Baseline Metrics
+========================
+(Fill in after running the Phase 1 test suite on your target hardware)
+
+Hardware: ___________________________________________________
+OS:       ___________________________________________________
+Compiler: ___________________________________________________
+Date:     ___________________________________________________
+
+Tokens/sec (AVX2):                    _____
+Tokens/sec (SSE4.2):                  _____
+Tokens/sec (scalar):                  _____
+RSS at idle (model loaded, not running): _____ MB
+RSS during 10-turn conversation:        _____ MB  (MUST BE < 750 MB)
+RSS after unload_model():               _____ MB  (MUST BE within 5 MB of pre-load)
+PU_LEVEL reset time (1000 objects):     _____ µs  (MUST BE < 1 ms)
+TLSF alloc time (O(1) proof):          _____ ns   (must not increase with heap size)
+model_verify() time:                   _____ ms
+ASan errors:                           0
+TSan races:                            0
+UBSan errors:                          0
+
+Commit Gate Checklist
+---------------------
+[ ] All unit + integration tests pass under ASan + TSan + UBSan
+[ ] RSS during 10-turn conversation is < 750 MB (measured with /usr/bin/time -v)
+[ ] load_model() with tampered model returns MONDAY_ERR_MODEL_HASH_MISMATCH
+[ ] InferenceResult.text freed via monday_free() shows zero ASan errors
+[ ] CPUID dispatch selects AVX2 on AVX2 machine (verified by get_capabilities() flags)
+[ ] PU_LEVEL reset with ASan poison — stale pointer read detected correctly
+[ ] TSan reports zero races on epoch reclamation test
+[ ] All benchmark numbers committed to this file
+[ ] Terminal chat works: echo "hello" | ./monday-core --text-only produces a response
+
+Commands to measure RSS:
+  /usr/bin/time -v ./build/monday-core --text-only 2>&1 | grep "Maximum resident"
+
+Commands to measure tokens/sec:
+  echo "Explain the water cycle in one paragraph." | \
+    perf stat -e instructions,cycles ./build/monday-core --benchmark-inference 2>&1
+
+Commands to run sanitiser builds:
+  cmake --preset asan && cmake --build build-asan && ctest --test-dir build-asan
+  cmake --preset tsan && cmake --build build-tsan && ctest --test-dir build-tsan

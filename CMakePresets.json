@@ -58,6 +58,16 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "MONDAY_SANITIZER": "ubsan"
       }
+    },
+    {
+      "name": "asan-ubsan",
+      "displayName": "ASan + UBSan combined (Phase 1 allocator gate)",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build-asan-ubsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MONDAY_SANITIZER": "asan-ubsan"
+      }
     }
   ]
 }
