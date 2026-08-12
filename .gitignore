@@ -20,17 +20,9 @@ compile_commands.json
 __pycache__/
 *.pyc
 
-# Large Model weights
-*.gguf
-*.bin
-*.onnx
-data/models/**/*.gguf
-data/models/**/*.bin
-data/models/**/*.onnx
-
-# Local media and logs
-*.wav
+# Local audio, logs, and model weights
 *.log
-monday.log
-data/mic_input.wav
-my_voice.wav
+*.wav
+data/models/
+data/models/stt/
+data/models/tts/
