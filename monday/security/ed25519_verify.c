@@ -22,6 +22,16 @@ monday_error_t monday_ed25519_verify(const uint8_t *message,
     if (!message || !signature || !public_key) {
         return MONDAY_ERROR(MONDAY_ERR_INVALID_ARG, "null argument to ed25519_verify");
     }
+
+    // Dev-build sentinel: if the embedded key is all-zeros (not a real key),
+    // behave like the stub and return NOT_SUPPORTED.  model_verify treats
+    // NOT_SUPPORTED as "skip sig check in dev builds" per architecture §2.3.
+    static const uint8_t zero32[32] = {0};
+    if (memcmp(public_key, zero32, 32) == 0) {
+        return MONDAY_ERROR(MONDAY_ERR_NOT_SUPPORTED,
+                            "Ed25519 verify skipped: dev build (all-zero sentinel key)");
+    }
+
     int rc = crypto_sign_ed25519_verify_detached(signature, message,
                                                   (unsigned long long)message_len,
                                                   public_key);

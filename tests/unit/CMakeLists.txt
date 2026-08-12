@@ -57,3 +57,34 @@ add_executable(test_bt_engine test_bt_engine.cpp)
 target_link_libraries(test_bt_engine PRIVATE Catch2::Catch2WithMain monday_core_lib monday_memory_lib monday_goap_lib monday_bt_lib)
 target_include_directories(test_bt_engine PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/src/generated)
 add_test(NAME test_bt_engine COMMAND test_bt_engine)
+
+# ── Phase 3: test_kdf (C++) ──────────────────────────────────────────────────
+add_executable(test_kdf test_kdf.cpp)
+target_link_libraries(test_kdf PRIVATE Catch2::Catch2WithMain monday_core_lib monday_security_lib)
+target_include_directories(test_kdf PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_kdf COMMAND test_kdf)
+
+# ── Phase 3: test_audit_log (C++) ────────────────────────────────────────────
+add_executable(test_audit_log test_audit_log.cpp)
+target_link_libraries(test_audit_log PRIVATE Catch2::Catch2WithMain monday_core_lib monday_security_lib)
+target_include_directories(test_audit_log PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_audit_log COMMAND test_audit_log)
+
+# ── Phase 3: test_engram (C++) ───────────────────────────────────────────────
+add_executable(test_engram test_engram.cpp)
+target_link_libraries(test_engram PRIVATE Catch2::Catch2WithMain monday_core_lib monday_memory_lib monday_security_lib monday_storage_lib monday_engram_lib monday_inference_lib)
+target_include_directories(test_engram PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_engram COMMAND test_engram)
+
+# ── Phase 3: test_hybrid_retriever (C++) ─────────────────────────────────────
+add_executable(test_hybrid_retriever test_hybrid_retriever.cpp)
+target_link_libraries(test_hybrid_retriever PRIVATE Catch2::Catch2WithMain monday_core_lib monday_memory_lib monday_security_lib monday_storage_lib monday_engram_lib monday_rag_lib)
+target_include_directories(test_hybrid_retriever PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_hybrid_retriever COMMAND test_hybrid_retriever)
+
+# ── Phase 3: test_tier_selector (C++) ────────────────────────────────────────
+add_executable(test_tier_selector test_tier_selector.cpp)
+target_link_libraries(test_tier_selector PRIVATE Catch2::Catch2WithMain monday_core_lib monday_memory_lib monday_security_lib monday_storage_lib monday_engram_lib monday_rag_lib)
+target_include_directories(test_tier_selector PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_tier_selector COMMAND test_tier_selector)
+

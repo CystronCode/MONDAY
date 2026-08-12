@@ -37,3 +37,22 @@ target_include_directories(test_voice_pipeline PRIVATE
     ${CMAKE_SOURCE_DIR}/src/generated
 )
 add_test(NAME test_voice_pipeline COMMAND test_voice_pipeline)
+
+# ── Phase 3: test_rag_pipeline (C++) ─────────────────────────────────────────
+add_executable(test_rag_pipeline test_rag_pipeline.cpp)
+target_link_libraries(test_rag_pipeline PRIVATE
+    Catch2::Catch2WithMain
+    monday_core_lib
+    monday_memory_lib
+    monday_security_lib
+    monday_storage_lib
+    monday_engram_lib
+    monday_rag_lib
+    pthread
+)
+target_include_directories(test_rag_pipeline PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src/generated
+)
+add_test(NAME test_rag_pipeline COMMAND test_rag_pipeline)
+

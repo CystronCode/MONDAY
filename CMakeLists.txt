@@ -100,19 +100,27 @@ add_library(monday_memory_lib STATIC
     monday/memory/tlsf_pool.c
 )
 target_include_directories(monday_memory_lib PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(monday_memory_lib PUBLIC monday_core_lib)
+# monday_memory_lib only needs the headers from monday_core_lib, not the link
+target_include_directories(monday_memory_lib PUBLIC ${CMAKE_SOURCE_DIR}/src/generated)
+# Propagate monday_memory_lib to all consumers of monday_core_lib via INTERFACE
+target_link_libraries(monday_core_lib INTERFACE monday_memory_lib)
+
+# Find libsodium and sqlcipher using PkgConfig
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SODIUM REQUIRED libsodium)
+pkg_check_modules(SQLCIPHER REQUIRED sqlcipher)
 
 # ── monday_security_lib (Phase 1 — Ed25519 + model_verify) ───────────────────
 add_library(monday_security_lib STATIC
     monday/security/ed25519_verify.c
     monday/security/model_verify.cpp
+    monday/security/kdf.cpp
+    monday/security/keystore.cpp
+    monday/security/audit_log.cpp
 )
 target_include_directories(monday_security_lib PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(monday_security_lib PUBLIC monday_core_lib)
-# Uncomment when libsodium is available:
-# find_package(sodium REQUIRED)
-# target_link_libraries(monday_security_lib PUBLIC sodium)
-# target_compile_definitions(monday_security_lib PUBLIC MONDAY_HAVE_LIBSODIUM)
+target_link_libraries(monday_security_lib PUBLIC monday_core_lib monday_memory_lib ${SODIUM_LIBRARIES})
+target_compile_definitions(monday_security_lib PUBLIC MONDAY_HAVE_LIBSODIUM)
 
 # ── CPUID kernel compile options ──────────────────────────────────────────────
 # The three kernel variants are compiled separately with different SIMD flags.
@@ -197,6 +205,49 @@ add_library(monday_bt_lib STATIC
 target_include_directories(monday_bt_lib PUBLIC ${CMAKE_SOURCE_DIR})
 target_link_libraries(monday_bt_lib PUBLIC monday_core_lib monday_goap_lib)
 
+# ── monday_storage_lib (Phase 3 — SQLCipher + Migrations) ────────────────────
+add_library(monday_storage_lib STATIC
+    monday/storage/db.cpp
+    monday/storage/migrations.cpp
+    monday/storage/integrity_check.cpp
+)
+target_include_directories(monday_storage_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_storage_lib PUBLIC
+    monday_core_lib
+    monday_security_lib
+    ${SQLCIPHER_LIBRARIES}
+)
+
+# ── monday_engram_lib (Phase 3 — Episodic + Semantic + Summariser) ───────────
+add_library(monday_engram_lib STATIC
+    monday/engram/episodic_store.cpp
+    monday/engram/semantic_store.cpp
+    monday/engram/summariser.cpp
+    monday/engram/engram.cpp
+)
+target_include_directories(monday_engram_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_engram_lib PUBLIC
+    monday_core_lib
+    monday_storage_lib
+    monday_inference_lib
+)
+
+# ── monday_rag_lib (Phase 3 — Indexing + Ingestion + Hybrid) ─────────────────
+add_library(monday_rag_lib STATIC
+    monday/rag/embedding/minilm_embedder.cpp
+    monday/rag/backends/mrl_index.cpp
+    monday/rag/backends/diskann_index.cpp
+    monday/rag/tier_selector.cpp
+    monday/rag/ingestion_pipeline.cpp
+    monday/rag/hybrid_retriever.cpp
+)
+target_include_directories(monday_rag_lib PUBLIC ${CMAKE_SOURCE_DIR})
+target_link_libraries(monday_rag_lib PUBLIC
+    monday_core_lib
+    monday_storage_lib
+    monday_engram_lib
+)
+
 # ── monday-core executable ────────────────────────────────────────────────────
 add_executable(monday-core
     monday-core/main.cpp
@@ -215,9 +266,31 @@ target_link_libraries(monday-core PRIVATE
     monday_voice_lib
     monday_goap_lib
     monday_bt_lib
+    monday_storage_lib
+    monday_engram_lib
+    monday_rag_lib
     pthread
 )
 add_dependencies(monday-core generate_blackboard)
+
+# ── monday-sandbox executable ─────────────────────────────────────────────────
+add_executable(monday-sandbox
+    tools/interactive_sandbox.cpp
+)
+target_include_directories(monday-sandbox PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src/generated
+)
+target_link_libraries(monday-sandbox PRIVATE
+    monday_core_lib
+    monday_memory_lib
+    monday_security_lib
+    monday_inference_lib
+    monday_storage_lib
+    monday_engram_lib
+    monday_rag_lib
+    pthread
+)
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 enable_testing()
