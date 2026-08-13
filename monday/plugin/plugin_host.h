@@ -10,6 +10,9 @@
 #include <memory>
 #include <chrono>
 #include <sys/types.h>
+#ifdef _WIN32
+typedef int pid_t;
+#endif
 #include "monday/core/result.h"
 #include "monday/core/errors.h"
 #include "monday/plugin/plugin_loader.h"

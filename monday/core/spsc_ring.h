@@ -16,8 +16,13 @@
 extern "C" {
 typedef std::atomic<size_t> monday_atomic_size_t;
 #else
+#include "monday/core/platform.h"
+#ifndef _MSC_VER
 #include <stdatomic.h>
 typedef _Atomic size_t monday_atomic_size_t;
+#else
+typedef atomic_size_t monday_atomic_size_t;
+#endif
 #endif
 
 typedef struct monday_spsc_ring {

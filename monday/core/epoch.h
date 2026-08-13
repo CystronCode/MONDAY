@@ -15,8 +15,11 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdatomic.h>
 #include <stdbool.h>
+#include "monday/core/platform.h"
+#ifndef _MSC_VER
+#include <stdatomic.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {

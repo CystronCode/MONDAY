@@ -9,7 +9,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Hardened warning flags
-add_compile_options(-Wall -Wextra -Werror -pedantic)
+if(MSVC)
+    add_compile_options(/W3 /wd4996 /wd4505)
+else()
+    add_compile_options(-Wall -Wextra -Werror -pedantic)
+endif()
 
 # Module includes
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -107,6 +111,9 @@ target_link_libraries(monday_core_lib INTERFACE monday_memory_lib)
 
 # Find libsodium, sqlcipher, tree-sitter, and lua5.4 using PkgConfig
 find_package(PkgConfig REQUIRED)
+if(MSVC)
+    link_directories(D:/src/vcpkg/installed/x64-windows/lib)
+endif()
 pkg_check_modules(SODIUM REQUIRED libsodium)
 pkg_check_modules(SQLCIPHER REQUIRED sqlcipher)
 pkg_check_modules(TREESITTER REQUIRED tree-sitter)
@@ -122,8 +129,12 @@ add_library(monday_security_lib STATIC
     monday/security/consent.cpp
     monday/security/seccomp_filter.c
 )
-target_include_directories(monday_security_lib PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(monday_security_lib PUBLIC monday_core_lib monday_memory_lib ${SODIUM_LIBRARIES} ${SQLCIPHER_LIBRARIES})
+target_include_directories(monday_security_lib PUBLIC ${CMAKE_SOURCE_DIR} ${SODIUM_INCLUDE_DIRS})
+if(MSVC)
+    target_link_libraries(monday_security_lib PUBLIC monday_core_lib monday_memory_lib ${SODIUM_LIBRARIES} ${SQLCIPHER_LIBRARIES} crypt32)
+else()
+    target_link_libraries(monday_security_lib PUBLIC monday_core_lib monday_memory_lib ${SODIUM_LIBRARIES} ${SQLCIPHER_LIBRARIES})
+endif()
 target_compile_definitions(monday_security_lib PUBLIC MONDAY_HAVE_LIBSODIUM)
 
 # ── CPUID kernel compile options ──────────────────────────────────────────────
@@ -190,7 +201,17 @@ add_library(monday_voice_lib STATIC
     monday/voice/tts_piper.cpp
 )
 target_include_directories(monday_voice_lib PUBLIC ${CMAKE_SOURCE_DIR})
-target_link_libraries(monday_voice_lib PUBLIC monday_core_lib pthread)
+pkg_check_modules(PORTAUDIO portaudio-2.0)
+if(PORTAUDIO_FOUND)
+    target_include_directories(monday_voice_lib PUBLIC ${PORTAUDIO_INCLUDE_DIRS})
+    target_link_libraries(monday_voice_lib PUBLIC ${PORTAUDIO_LIBRARIES})
+    target_compile_definitions(monday_voice_lib PUBLIC MONDAY_HAVE_PORTAUDIO)
+endif()
+if(NOT MSVC)
+    target_link_libraries(monday_voice_lib PUBLIC monday_core_lib pthread)
+else()
+    target_link_libraries(monday_voice_lib PUBLIC monday_core_lib)
+endif()
 
 # ── monday_goap_lib (Phase 2 — Intent Table + GOAP Planner + Extractors) ──────
 add_library(monday_goap_lib STATIC
@@ -319,6 +340,22 @@ add_executable(generate_trusted_keys
 target_include_directories(generate_trusted_keys PRIVATE ${CMAKE_SOURCE_DIR} ${SODIUM_INCLUDE_DIRS})
 target_link_libraries(generate_trusted_keys PRIVATE ${SODIUM_LIBRARIES})
 
+# ── stage2_install executable (Phase 6 — Installer tool) ─────────────────────
+add_executable(stage2_install
+    installer/stage2_install.cpp
+)
+target_include_directories(stage2_install PRIVATE ${CMAKE_SOURCE_DIR} ${SODIUM_INCLUDE_DIRS})
+target_link_libraries(stage2_install PRIVATE
+    monday_security_lib
+    monday_core_lib
+    monday_memory_lib
+    ${SODIUM_LIBRARIES}
+    ${SQLCIPHER_LIBRARIES}
+)
+set_target_properties(stage2_install PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/installer"
+)
+
 # ── monday-core executable ────────────────────────────────────────────────────
 add_executable(monday-core
     monday-core/main.cpp
@@ -344,8 +381,10 @@ target_link_libraries(monday-core PRIVATE
     monday_parsers_lib
     monday_code_intel_lib
     monday_plugin_lib
-    pthread
 )
+if(NOT MSVC)
+    target_link_libraries(monday-core PRIVATE pthread)
+endif()
 add_dependencies(monday-core generate_blackboard)
 
 # ── monday-sandbox executable ─────────────────────────────────────────────────
@@ -364,8 +403,10 @@ target_link_libraries(monday-sandbox PRIVATE
     monday_storage_lib
     monday_engram_lib
     monday_rag_lib
-    pthread
 )
+if(NOT MSVC)
+    target_link_libraries(monday-sandbox PRIVATE pthread)
+endif()
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 enable_testing()

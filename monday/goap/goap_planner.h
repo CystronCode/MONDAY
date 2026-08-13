@@ -11,6 +11,7 @@
 
 #include "monday/core/errors.h"
 #include "monday/core/result.h"
+#include "monday/security/consent.h"
 #include "monday/goap/intent_table.h"
 #include "monday/goap/extractors.h"
 

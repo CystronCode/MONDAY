@@ -3,10 +3,11 @@
 
 #include "monday/core/result.h"
 #include "monday/core/errors.h"
-#include <sqlite3.h>
 #include <string>
 #include <functional>
 #include <cstdint>
+
+struct sqlite3;
 
 namespace monday {
 

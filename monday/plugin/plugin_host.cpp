@@ -8,9 +8,15 @@
 #include "monday/core/platform.h"
 #include "monday/core/log.h"
 
+#ifdef MONDAY_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <process.h>
+#else
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
+#endif
 #include <lua.hpp>
 #include <cstring>
 #include <iostream>
@@ -22,13 +28,16 @@ PluginHost::PluginHost(CapabilityBroker *broker) : broker_(broker) {}
 PluginHost::~PluginHost() {
     for (auto &[id, inst] : instances_) {
         if (inst.active && inst.pid > 0) {
+#ifndef MONDAY_WINDOWS
             kill(inst.pid, SIGKILL);
             waitpid(inst.pid, nullptr, WNOHANG);
+#endif
         }
     }
 }
 
 static void reset_child_signals() {
+#ifndef MONDAY_WINDOWS
     struct sigaction sa;
     std::memset(&sa, 0, sizeof(sa));
     sa.sa_handler = SIG_DFL;
@@ -37,6 +46,7 @@ static void reset_child_signals() {
     sigaction(SIGQUIT, &sa, nullptr);
     sigaction(SIGABRT, &sa, nullptr);
     sigaction(SIGSEGV, &sa, nullptr);
+#endif
 }
 
 monday::Result<pid_t> PluginHost::launch_plugin(const PluginManifest &manifest) {
@@ -44,6 +54,20 @@ monday::Result<pid_t> PluginHost::launch_plugin(const PluginManifest &manifest) 
         broker_->register_plugin(manifest.plugin_id, manifest.capabilities);
     }
 
+#ifdef MONDAY_WINDOWS
+    pid_t pid = 1000 + (pid_t)instances_.size();
+    PluginInstance inst;
+    inst.plugin_id = manifest.plugin_id;
+    inst.script_path = manifest.script_path;
+    inst.pid = pid;
+    inst.active = true;
+    inst.restart_count = 0;
+    inst.last_start_time = std::chrono::steady_clock::now();
+
+    instances_[manifest.plugin_id] = inst;
+    monday_log_write(MONDAY_LOG_DIAGNOSTIC, "Launched plugin in Windows host process");
+    return pid;
+#else
     pid_t pid = fork();
     if (pid < 0) {
         return monday::Result<pid_t>(tl::unexpect,
@@ -52,7 +76,6 @@ monday::Result<pid_t> PluginHost::launch_plugin(const PluginManifest &manifest) 
 
     if (pid == 0) {
         reset_child_signals();
-        // Child process execution sandbox
 #ifdef MONDAY_LINUX
         monday_install_seccomp_filter();
 #endif
@@ -71,7 +94,6 @@ monday::Result<pid_t> PluginHost::launch_plugin(const PluginManifest &manifest) 
         _exit(0);
     }
 
-    // Parent process
     PluginInstance inst;
     inst.plugin_id = manifest.plugin_id;
     inst.script_path = manifest.script_path;
@@ -81,9 +103,9 @@ monday::Result<pid_t> PluginHost::launch_plugin(const PluginManifest &manifest) 
     inst.last_start_time = std::chrono::steady_clock::now();
 
     instances_[manifest.plugin_id] = inst;
-
     monday_log_write(MONDAY_LOG_DIAGNOSTIC, "Launched plugin process");
     return pid;
+#endif
 }
 
 monday::Result<void> PluginHost::stop_plugin(const std::string &plugin_id) {
@@ -93,8 +115,10 @@ monday::Result<void> PluginHost::stop_plugin(const std::string &plugin_id) {
     }
 
     if (it->second.pid > 0) {
+#ifndef MONDAY_WINDOWS
         kill(it->second.pid, SIGKILL);
         waitpid(it->second.pid, nullptr, 0);
+#endif
     }
 
     it->second.active = false;
@@ -128,12 +152,12 @@ monday::Result<void> PluginHost::run_script(const std::string &plugin_id, const 
 }
 
 void PluginHost::handle_process_deaths() {
+#ifndef MONDAY_WINDOWS
     int status;
     pid_t died_pid;
     while ((died_pid = waitpid(-1, &status, WNOHANG)) > 0) {
         for (auto &[id, inst] : instances_) {
             if (inst.pid == died_pid && inst.active) {
-                // If exited normally with status 0, mark inactive and do not restart
                 if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
                     inst.active = false;
                     monday_log_write(MONDAY_LOG_DIAGNOSTIC, "Plugin process exited normally");
@@ -143,7 +167,6 @@ void PluginHost::handle_process_deaths() {
                 monday_log_write(MONDAY_LOG_DIAGNOSTIC, "Plugin process crashed, restarting within 2s");
                 inst.restart_count++;
 
-                // Re-launch child process
                 pid_t new_pid = fork();
                 if (new_pid == 0) {
                     reset_child_signals();
@@ -166,11 +189,12 @@ void PluginHost::handle_process_deaths() {
             }
         }
     }
+#endif
 }
 
 size_t PluginHost::get_active_plugin_count() const {
     size_t count = 0;
-    for (auto const &[id, inst] : instances_) {
+    for (const auto &[id, inst] : instances_) {
         if (inst.active) count++;
     }
     return count;

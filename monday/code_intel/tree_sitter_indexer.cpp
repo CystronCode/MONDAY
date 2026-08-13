@@ -15,9 +15,16 @@ namespace monday {
 
 // Forward declarations for Tree-sitter language functions if available or dynamic fallback
 extern "C" {
+#ifdef _MSC_VER
+    // MSVC: declare as regular extern — linker will resolve or leave unresolved (use /FORCE:UNRESOLVED if needed)
+    const TSLanguage *tree_sitter_python(void);
+    const TSLanguage *tree_sitter_c(void);
+    const TSLanguage *tree_sitter_cpp(void);
+#else
     const TSLanguage *tree_sitter_python(void) __attribute__((weak));
     const TSLanguage *tree_sitter_c(void) __attribute__((weak));
     const TSLanguage *tree_sitter_cpp(void) __attribute__((weak));
+#endif
 }
 
 TreeSitterIndexer::TreeSitterIndexer() {}

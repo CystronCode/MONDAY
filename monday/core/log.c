@@ -1,18 +1,41 @@
 // monday/core/log.c
 #include "monday/core/log.h"
+#include "monday/core/platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <pthread.h>
 #include <sys/stat.h>
+
+#ifdef MONDAY_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+static CRITICAL_SECTION g_mutex;
+static int g_mutex_inited = 0;
+
+static void log_lock(void) {
+    if (!g_mutex_inited) {
+        InitializeCriticalSection(&g_mutex);
+        g_mutex_inited = 1;
+    }
+    EnterCriticalSection(&g_mutex);
+}
+
+static void log_unlock(void) {
+    LeaveCriticalSection(&g_mutex);
+}
+#else
+#include <pthread.h>
+static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
+static void log_lock(void) { pthread_mutex_lock(&g_mutex); }
+static void log_unlock(void) { pthread_mutex_unlock(&g_mutex); }
+#endif
 
 static FILE          *g_log_file       = NULL;
 static char           g_log_path[4096] = {0};
 static size_t         g_max_bytes      = 0;
 static int            g_generations    = 0;
 static size_t         g_current_bytes  = 0;
-static pthread_mutex_t g_mutex         = PTHREAD_MUTEX_INITIALIZER;
 
 static const char *level_name(monday_log_level_t l) {
     switch (l) {
@@ -55,7 +78,7 @@ static void rotate(void) {
 }
 
 int monday_log_init(const char *path, size_t max_size_bytes, int generations) {
-    pthread_mutex_lock(&g_mutex);
+    log_lock();
 
     strncpy(g_log_path, path, sizeof(g_log_path) - 1);
     g_max_bytes   = max_size_bytes;
@@ -63,7 +86,7 @@ int monday_log_init(const char *path, size_t max_size_bytes, int generations) {
 
     g_log_file = fopen(path, "a");
     if (!g_log_file) {
-        pthread_mutex_unlock(&g_mutex);
+        log_unlock();
         return -1;
     }
 
@@ -73,7 +96,7 @@ int monday_log_init(const char *path, size_t max_size_bytes, int generations) {
         g_current_bytes = (size_t)st.st_size;
     }
 
-    pthread_mutex_unlock(&g_mutex);
+    log_unlock();
     return 0;
 }
 
@@ -82,9 +105,7 @@ static void write_line(monday_log_level_t level, const char *msg,
                         int has_extra) {
     if (!g_log_file) return;
 
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    long ts_sec = (long)ts.tv_sec;
+    long ts_sec = (long)time(NULL);
 
     char line[8192];
     int  len;
@@ -113,25 +134,25 @@ static void write_line(monday_log_level_t level, const char *msg,
 }
 
 void monday_log_write(monday_log_level_t level, const char *msg) {
-    pthread_mutex_lock(&g_mutex);
+    log_lock();
     write_line(level, msg, NULL, 0, 0);
-    pthread_mutex_unlock(&g_mutex);
+    log_unlock();
 }
 
 void monday_log_write_kv_long(monday_log_level_t level,
                                const char *msg,
                                const char *key,
                                long value) {
-    pthread_mutex_lock(&g_mutex);
+    log_lock();
     write_line(level, msg, key, value, 1);
-    pthread_mutex_unlock(&g_mutex);
+    log_unlock();
 }
 
 void monday_log_close(void) {
-    pthread_mutex_lock(&g_mutex);
+    log_lock();
     if (g_log_file) {
         fclose(g_log_file);
         g_log_file = NULL;
     }
-    pthread_mutex_unlock(&g_mutex);
+    log_unlock();
 }

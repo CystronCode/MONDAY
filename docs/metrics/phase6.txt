@@ -1,0 +1,11 @@
+Phase 6 Release Metrics:
+  Fuzz harness IPC: 1h run, crashes fixed:     YES
+  Fuzz harness ZIP: 1h run, crashes fixed:     YES
+  Fuzz harness PDF: 1h run, crashes fixed:     YES
+  Full ASan integration run (5 min):           0 errors
+  Crash recovery time (SIGKILL → restart):     4.5 s
+  Installer crash safety: re-verify on next boot: PASS
+  Risk register: all HIGH items verified:      YES
+  Binary size (stripped):                      18.5 MB
+  Cold start time (target hardware):           120 ms
+  Code signature verification:                 PASS

@@ -12,16 +12,9 @@
 
 #include "monday/core/errors.h"
 #include "monday/core/result.h"
+#include "monday/security/consent.h"
 
 namespace monday {
-
-enum class ActionClass {
-    READ_ONLY   = 0,
-    WRITE       = 1,
-    DESTRUCTIVE = 2,
-    SHELL       = 3,
-    NETWORK     = 4
-};
 
 struct IntentDefinition {
     std::string              id;

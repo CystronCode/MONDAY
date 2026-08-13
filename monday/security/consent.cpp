@@ -1,6 +1,7 @@
 // monday/security/consent.cpp
 #include "monday/security/consent.h"
 #include "monday/core/log.h"
+#include <sqlite3.h>
 #include <ctime>
 #include <algorithm>
 #include <cctype>

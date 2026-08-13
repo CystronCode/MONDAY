@@ -1,4 +1,4 @@
-/* AUTO-GENERATED â€” DO NOT EDIT â€” see tools/generate_blackboard.py */
+/* AUTO-GENERATED — DO NOT EDIT — see tools/generate_blackboard.py */
 #include "blackboard_accessors.h"
 #include <string.h>
 #include <stdlib.h>

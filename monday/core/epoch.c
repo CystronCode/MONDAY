@@ -1,6 +1,8 @@
 #include "monday/core/epoch.h"
 #include "monday/core/platform.h"
+#ifndef _MSC_VER
 #include <stdatomic.h>
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>

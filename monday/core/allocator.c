@@ -1,10 +1,13 @@
 #include "monday/core/allocator.h"
+#include "monday/core/platform.h"
 #include "monday/core/epoch.h"
 #include "monday/memory/tlsf_pool.h"
 
 #include <stddef.h>
 #include <stdint.h>
+#ifndef _MSC_VER
 #include <stdatomic.h>
+#endif
 #include <string.h>
 
 #if defined(_WIN32)
